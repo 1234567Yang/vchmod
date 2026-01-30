@@ -213,10 +213,11 @@ int main(int argc, char *argv[]){
 // [cd PATH && ]
         final_command = realloc(final_command, strlen(final_command) + sizeof(char) * (2 + 1 + strlen(cwd) + 1 + 2 + 1));
         // https://stackoverflow.com/questions/308695/how-do-i-concatenate-const-literal-strings-in-c
-        strcpy(final_command, "cd ");
-        strcpy(final_command, cwd);
-        strcpy(final_command, " && ");
+        strcat(final_command, "cd ");
+        strcat(final_command, cwd);
+        strcat(final_command, " && ");
 
+        printf("\n\r\n\r");
         printf("Final executing command: \n\r\n\r");
         printf("%s\n", final_command);
 
