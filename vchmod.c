@@ -19,7 +19,7 @@
     char *var = safeStrMalloc(size, #var);
 
 struct termios old, new;
-int reset_console(){
+void reset_console(){
 	// set back
 	tcsetattr(STDIN_FILENO, TCSANOW, &old);
 }
