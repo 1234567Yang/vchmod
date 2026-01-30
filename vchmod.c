@@ -54,7 +54,7 @@ int print_user_access_control(int arr[9], int cursor_pos)
         }
         if (i == 2 || i == 5) printf("    ");
     }
-    printf("    |     Oct: %o\r", get_octal_number(arr));
+    printf("    |     Oct: %3o \r", get_octal_number(arr));
 	
 
 	fflush(stdout);
