@@ -16,7 +16,11 @@ int safe_execute(char *const args[]) {
     }
 
     int status;
-    waitpid(pid, &status, 0);
 
+	while (waitpid(pid, &status, 0) == -1) {
+    	if (errno != EINTR) {
+        	return 1; 
+    	}
+	}
     return (WIFEXITED(status) && WEXITSTATUS(status) == 0) ? 0 : 1;
 }
