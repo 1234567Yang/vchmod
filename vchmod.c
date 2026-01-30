@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 #include <termios.h>
 #include <unistd.h>
 #include <limits.h>
@@ -10,6 +9,10 @@
 #include <sys/stat.h>
 
 #include <errno.h>
+#include <signal.h>
+
+#include "safe_execute_command.h"
+
 
 #define ARR9(a) a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]
 #define SAFE_MALLOC_CHARPTR(var, size) \
@@ -20,6 +23,19 @@ int reset_console(){
 	// set back
 	tcsetattr(STDIN_FILENO, TCSANOW, &old);
 }
+
+void cleanup_and_reset(int sig) {
+    reset_console();
+    printf("\n");
+
+}
+
+
+void signal_handler(int sig) {
+    cleanup_and_reset(0);
+    exit(0);
+}
+
 
 int get_octal_number(int arr[9]){
 
@@ -40,7 +56,7 @@ int print_user_access_control(int arr[9], int cursor_pos)
 		else if(arr[i] == 1) arr_c[i] = 'a';
 		else{
 			perror("An error occured: arr is neither 0 or 1.\n");
-			reset_console();
+			cleanup_and_reset(0);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -67,7 +83,7 @@ char * safeStrMalloc(int size, char var_name[]){
 
     if(malloced == NULL) {
         fprintf(stderr, "An error occured: can not allocate memory for %s: %s\n", var_name, strerror(errno));
-        reset_console();
+        cleanup_and_reset(0);
         exit(EXIT_FAILURE);
     }
 
@@ -111,6 +127,14 @@ int main(int argc, char *argv[]){
     new = old;
     new.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &new);    
+
+
+
+
+    signal(SIGINT, signal_handler);
+
+
+
 
 	printf("\r\nq - Quit; Enter - Save; Arrows - Move/Switch; a - Allowed\n\n\r");
 	printf("     User      Group     Other     \n\r");
@@ -169,125 +193,38 @@ int main(int argc, char *argv[]){
 
 
 	if(c == '\n'){
-		long total_size = 0;
-        // the first arg is the program name
-		for(int i = 1; i < argc; i++) total_size += strlen(argv[i]);
-	    long alloc_size = total_size + sizeof(char)*(argc - 1 + 1);
-        // argv we skip #0, and the last one don't need a space, it only needs a \0.
-        // However, even though we did some verification that argv has at least 1 file, if argc size is 1, and we don't add 1, it's gonna to cause memory leak.
-        // Just another byte for safty ig
-        
-
-        // [chmod][ ][700] - not included anymore
-		// [ argv[n]][\0]
-
-
-        SAFE_MALLOC_CHARPTR(combined, alloc_size);
-        long ptr = 0;
-        for(int i = 1; i < argc; i++){
-            int j = 0;
-            while(argv[i][j] != '\0'){
-                combined[ptr] = argv[i][j];
-                j++;
-                ptr++;
-            }
-            if(i < argc - 1){
-                combined[ptr] = ' ';
-                ptr++;
-            }
-        }
-        combined[ptr] = '\0';
-        
-
-        long sprintf_size = strlen("chmod ") + strlen("700 ") + strlen(combined) + 1 + 10; // + 1 is for the \0, + 10 is just for safety
-
-        SAFE_MALLOC_CHARPTR(execute_command, sizeof(char) * sprintf_size);
-
+		// EXECUTE here
 
         int permission = get_octal_number(arr);
-        if(permission < 0 || permission > 999){
-		    perror("An error occured: permission is smaller than 0 or larger than 999");
-	     	reset_console();
+        if(permission < 0 || permission > 777){
+		    perror("An error occured: permission is smaller than 0 or larger than 777");
+	     	cleanup_and_reset(0);
             exit(EXIT_FAILURE);
         }
-        snprintf(execute_command, sizeof(char) * sprintf_size, "chmod %o %s", permission, combined);
-        
+		char octal_str[4];
+		snprintf(octal_str, sizeof(octal_str), "%03o", permission);
+		char *execution_commands[argc + 1 + 1]; // number + last one NULL
+		execution_commands[0] = "chmod";
+		execution_commands[1] = octal_str;
+		for(int i = 1; i < argc; i++){
+			execution_commands[i + 1] = argv[i];
+		}
+		execution_commands[argc + 1] = NULL;
 
-        
-        
-        char cwd[PATH_MAX];
-        
-        if (getcwd(cwd, sizeof(cwd)) != NULL) {
-         
-        } else {
-            perror("getcwd() error");
-            reset_console();
+    	if (safe_execute(execution_commands) == 0) {
+    	} else {
+		    perror("An error occured: failed to execute the command");
+	     	cleanup_and_reset(0);
             exit(EXIT_FAILURE);
-        }
-
-// [cd PATH && ]
-
-        SAFE_MALLOC_CHARPTR(prefix, strlen("cd ") + strlen(cwd) + strlen(" && ") + 1);
-
-        sprintf(prefix, "cd %s && ", cwd);
+    	}
 
 
-
-        SAFE_MALLOC_CHARPTR(final_command, strlen(prefix) + strlen(execute_command) + 1); 
-        
-        sprintf(final_command, "%s%s", prefix, execute_command);
-        
+        // AFTER_EXECUTED:
 
 
-
-        free(combined);
-        free(execute_command);
-        free(prefix);
-
-
-
-
-        printf("\n\r\n\r");
-        printf("Final executing command: \n\r\n\r");
-        printf("%s\n", final_command);
-
-        printf("Press q to cancle. Press anything else to execute\n\r");
-        
-        
-        read(STDIN_FILENO, &c, 1); 
-        
-        if(c == 'q'){
-            printf("Cancled\n\r");
-            goto AFTER_EXECUTED; 
-        }
-
-        // https://stackoverflow.com/questions/646241/c-run-a-system-command-and-get-output
-        char command_opt[1035];
-        FILE *fp;
-        fp = popen(final_command, "r");
-        if (fp == NULL) {
-            perror("Failed to run command");
-            reset_console();
-            exit(EXIT_FAILURE);
-        }
-
-        /* Read the output a line at a time - output it. */
-        while (fgets(command_opt, sizeof(command_opt), fp) != NULL) {
-            printf("%s", command_opt);
-        }
-
-        /* close */
-        pclose(fp);
-
-
-
-        AFTER_EXECUTED:
-
-
-        free(final_command);
 	}
 
-	reset_console();
+	cleanup_and_reset(0);
 
 
 
