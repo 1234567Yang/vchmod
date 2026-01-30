@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 
 #include <termios.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include <sys/stat.h>
 
@@ -17,6 +20,13 @@ int reset_console(){
 	tcsetattr(STDIN_FILENO, TCSANOW, &old);
 }
 
+int get_octal_number(int arr[9]){
+
+	int oct_val = arr[0]*4 + arr[1]*2 + arr[2];      // user
+	oct_val = oct_val * 8 + arr[3]*4 + arr[4]*2 + arr[5];  // group  
+	oct_val = oct_val * 8 + arr[6]*4 + arr[7]*2 + arr[8];  // other
+	return oct_val;
+}
 
 
 // cursor_pos starts with 0
@@ -33,9 +43,6 @@ int print_user_access_control(int arr[9], int cursor_pos)
 			exit(EXIT_FAILURE);
 		}
 	}
-	int oct_val = arr[0]*4 + arr[1]*2 + arr[2];      // user
-	oct_val = oct_val * 8 + arr[3]*4 + arr[4]*2 + arr[5];  // group  
-	oct_val = oct_val * 8 + arr[6]*4 + arr[7]*2 + arr[8];  // other
 	
 	// printf("     %c %c %c     %c %c %c     %c %c %c     |     Oct: %o\r", ARR9(arr_c),oct_val);
 	printf("     ");
@@ -47,7 +54,7 @@ int print_user_access_control(int arr[9], int cursor_pos)
         }
         if (i == 2 || i == 5) printf("    ");
     }
-    printf("    |     Oct: %o\r", oct_val);
+    printf("    |     Oct: %o\r", get_octal_number(arr));
 	
 
 	fflush(stdout);
@@ -112,7 +119,7 @@ int main(int argc, char *argv[]){
 	print_user_access_control(arr, cursor_pos);
 
 	char c;
-	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q') {
+	while (read(STDIN_FILENO, &c, 1) == 1 && c != 'q' && c != '\n') {
         if (c == '\x1B') {
             char seq[2];
             if (read(STDIN_FILENO, &seq[0], 1) != 1) continue;
@@ -141,6 +148,104 @@ int main(int argc, char *argv[]){
 		print_user_access_control(arr, cursor_pos);
 
     }
+
+
+	if(c == '\n'){
+		long total_size = 0;
+        // the first arg is the program name
+		for(int i = 1; i < argc; i++) total_size += strlen(argv[i]);
+	    long alloc_size = total_size + sizeof(char)*(argc - 1 + 1);
+        // argv we skip #0, and the last one don't need a space, it only needs a \0.
+        // However, even though we did some verification that argv has at least 1 file, if argc size is 1, and we don't add 1, it's gonna to cause memory leak.
+        // Just another byte for safty ig
+        
+
+
+		char *combined = malloc(alloc_size);
+        // [chmod][ ][700] - not included anymore
+		// [ argv[n]][\0]
+            
+            if(combined == NULL) {
+		        perror("An error occured: can not allocate memory.");
+	        	reset_console();
+		        exit(EXIT_FAILURE);
+            }
+        long ptr = 0;
+        for(int i = 1; i < argc; i++){
+            int j = 0;
+            while(argv[i][j] != '\0'){
+                combined[ptr] = argv[i][j];
+                j++;
+                ptr++;
+            }
+            if(i < argc - 1){
+                combined[ptr] = ' ';
+                ptr++;
+            }
+        }
+        combined[ptr] = '\0';
+        
+
+        long sprintf_size = 5 + 1 + 3 + 1 + strlen(combined) + 1 + 10; // + 10 is just for safety
+        char *final_command = malloc(sizeof(char) * sprintf_size);
+        int permission = get_octal_number(arr);
+        if(permission < 0 || permission > 999){
+		    perror("An error occured: permission is smaller than 0 or larger than 999");
+	     	reset_console();
+            exit(EXIT_FAILURE);
+        }
+        snprintf(final_command, sizeof(char) * sprintf_size, "chmod %d %s", permission, combined);
+        
+        free(combined);
+
+        
+        
+        char cwd[PATH_MAX];
+        
+        if (getcwd(cwd, sizeof(cwd)) != NULL) {
+         
+        } else {
+            perror("getcwd() error");
+            reset_console();
+            exit(EXIT_FAILURE);
+        }
+
+// [cd PATH && ]
+        final_command = realloc(final_command, strlen(final_command) + sizeof(char) * (2 + 1 + strlen(cwd) + 1 + 2 + 1));
+        // https://stackoverflow.com/questions/308695/how-do-i-concatenate-const-literal-strings-in-c
+        strcpy(final_command, "cd ");
+        strcpy(final_command, cwd);
+        strcpy(final_command, " && ");
+
+        printf("Final executing command: \n\r\n\r");
+        printf("%s\n", final_command);
+
+        printf("Press Enter to execute\n\r\n\r");
+        // https://stackoverflow.com/questions/646241/c-run-a-system-command-and-get-output
+        char command_opt[1035];
+        FILE *fp;
+        fp = popen(final_command, "r");
+        if (fp == NULL) {
+            perror("Failed to run command");
+            reset_console();
+            exit(EXIT_FAILURE);
+        }
+
+        /* Read the output a line at a time - output it. */
+        while (fgets(command_opt, sizeof(command_opt), fp) != NULL) {
+            printf("%s", command_opt);
+        }
+
+        /* close */
+        pclose(fp);
+
+
+
+
+
+        free(final_command);
+	}
+
 	reset_console();
 
 	printf("\n");
