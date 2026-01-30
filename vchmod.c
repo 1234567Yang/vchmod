@@ -186,17 +186,16 @@ int main(int argc, char *argv[]){
         combined[ptr] = '\0';
         
 
-        long sprintf_size = 5 + 1 + 3 + 1 + strlen(combined) + 1 + 10; // + 10 is just for safety
-        char *final_command = malloc(sizeof(char) * sprintf_size);
+        long sprintf_size = strlen("chmod ") + strlen("700 ") + strlen(combined) + 1 + 10; // + 1 is for the \0, + 10 is just for safety
+        char *execute_command = malloc(sizeof(char) * sprintf_size);
         int permission = get_octal_number(arr);
         if(permission < 0 || permission > 999){
 		    perror("An error occured: permission is smaller than 0 or larger than 999");
 	     	reset_console();
             exit(EXIT_FAILURE);
         }
-        snprintf(final_command, sizeof(char) * sprintf_size, "chmod %d %s", permission, combined);
+        snprintf(execute_command, sizeof(char) * sprintf_size, "chmod %d %s", permission, combined);
         
-        free(combined);
 
         
         
@@ -211,17 +210,31 @@ int main(int argc, char *argv[]){
         }
 
 // [cd PATH && ]
-        final_command = realloc(final_command, strlen(final_command) + sizeof(char) * (2 + 1 + strlen(cwd) + 1 + 2 + 1));
-        // https://stackoverflow.com/questions/308695/how-do-i-concatenate-const-literal-strings-in-c
-        strcat(final_command, "cd ");
-        strcat(final_command, cwd);
-        strcat(final_command, " && ");
+        char *prefix = malloc(strlen("cd ") + strlen(cwd) + strlen(" && ") + 1);
+        sprintf(prefix, "cd %s && ", cwd);
+
+        char *final_command = malloc(strlen(prefix) + strlen(final_command) + 1);
+        sprintf(final_command, "%s%s", prefix, execute_command);
+        
+
+
+
+        free(combined);
+        free(execute_command);
+        free(prefix);
+
+
+
 
         printf("\n\r\n\r");
         printf("Final executing command: \n\r\n\r");
         printf("%s\n", final_command);
 
         printf("Press Enter to execute\n\r\n\r");
+        
+        
+        read(STDIN_FILENO, &c, 1); 
+        
         // https://stackoverflow.com/questions/646241/c-run-a-system-command-and-get-output
         char command_opt[1035];
         FILE *fp;
