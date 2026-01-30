@@ -1,5 +1,7 @@
 #include <spawn.h>
 #include <sys/wait.h>
+#include <errno.h>
+
 
 extern char **environ;
 
