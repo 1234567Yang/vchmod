@@ -96,6 +96,9 @@ int main(int argc, char *argv[]){
 
 	struct stat st;
 
+
+    // printf("%d %s\n\n\n\n\n", which_arg, argv[which_arg]);
+
 	if (stat(argv[which_arg], &st) == -1) { perror("Stat can not get the information.\n"); exit(EXIT_FAILURE); }
 
 	int arr[9];
@@ -207,7 +210,7 @@ int main(int argc, char *argv[]){
 	     	reset_console();
             exit(EXIT_FAILURE);
         }
-        snprintf(execute_command, sizeof(char) * sprintf_size, "chmod %d %s", permission, combined);
+        snprintf(execute_command, sizeof(char) * sprintf_size, "chmod %o %s", permission, combined);
         
 
         
