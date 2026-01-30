@@ -12,7 +12,8 @@
 #include <errno.h>
 
 #define ARR9(a) a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]
-
+#define SAFE_MALLOC_CHARPTR(var, size) \
+    char *var = safeStrMalloc(size, #var);
 
 struct termios old, new;
 int reset_console(){
@@ -58,6 +59,20 @@ int print_user_access_control(int arr[9], int cursor_pos)
 	
 
 	fflush(stdout);
+}
+
+
+char * safeStrMalloc(int size, char var_name[]){
+    char *malloced = malloc(size);
+
+    if(malloced == NULL) {
+        fprintf(stderr, "An error occured: can not allocate memory for %s: %s\n", var_name, strerror(errno));
+        reset_console();
+        exit(EXIT_FAILURE);
+    }
+
+    return malloced;
+
 }
 
 
@@ -160,16 +175,11 @@ int main(int argc, char *argv[]){
         // Just another byte for safty ig
         
 
-
-		char *combined = malloc(alloc_size);
         // [chmod][ ][700] - not included anymore
 		// [ argv[n]][\0]
-            
-            if(combined == NULL) {
-		        perror("An error occured: can not allocate memory.");
-	        	reset_console();
-		        exit(EXIT_FAILURE);
-            }
+
+
+        SAFE_MALLOC_CHARPTR(combined, alloc_size);
         long ptr = 0;
         for(int i = 1; i < argc; i++){
             int j = 0;
@@ -187,7 +197,10 @@ int main(int argc, char *argv[]){
         
 
         long sprintf_size = strlen("chmod ") + strlen("700 ") + strlen(combined) + 1 + 10; // + 1 is for the \0, + 10 is just for safety
-        char *execute_command = malloc(sizeof(char) * sprintf_size);
+
+        SAFE_MALLOC_CHARPTR(execute_command, sizeof(char) * sprintf_size);
+
+
         int permission = get_octal_number(arr);
         if(permission < 0 || permission > 999){
 		    perror("An error occured: permission is smaller than 0 or larger than 999");
@@ -210,10 +223,15 @@ int main(int argc, char *argv[]){
         }
 
 // [cd PATH && ]
-        char *prefix = malloc(strlen("cd ") + strlen(cwd) + strlen(" && ") + 1);
+
+        SAFE_MALLOC_CHARPTR(prefix, strlen("cd ") + strlen(cwd) + strlen(" && ") + 1);
+
         sprintf(prefix, "cd %s && ", cwd);
 
-        char *final_command = malloc(strlen(prefix) + strlen(execute_command) + 1);
+
+
+        SAFE_MALLOC_CHARPTR(final_command, strlen(prefix) + strlen(execute_command) + 1); 
+        
         sprintf(final_command, "%s%s", prefix, execute_command);
         
 
