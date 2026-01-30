@@ -84,7 +84,7 @@ int main(int argc, char *argv[]){
     }
 */
 	int which_arg = -1;
-	for(int i = 0; i < argc; i++){
+	for(int i = 1; i < argc; i++){
 		if(argv[i][0] == '\0') continue;
 		if(argv[i][0] == '-') continue;
 		which_arg = i;
