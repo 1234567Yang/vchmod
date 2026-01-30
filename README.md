@@ -47,4 +47,4 @@ Hello, World!
 # Quick start
 
 * Clone
-* `gcc -o vchmod vchmod *.c`
+* `gcc -o vchmod *.c`
