@@ -1,4 +1,4 @@
-# Vchmod
+# vchmod
 
 v - visual
 vchmod - visual chmod
