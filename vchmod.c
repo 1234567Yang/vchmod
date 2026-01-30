@@ -251,11 +251,16 @@ int main(int argc, char *argv[]){
         printf("Final executing command: \n\r\n\r");
         printf("%s\n", final_command);
 
-        printf("Press Enter to execute\n\r\n\r");
+        printf("Press q to cancle. Press anything else to execute\n\r");
         
         
         read(STDIN_FILENO, &c, 1); 
         
+        if(c == 'q'){
+            printf("Cancled\n\r");
+            goto AFTER_EXECUTED; 
+        }
+
         // https://stackoverflow.com/questions/646241/c-run-a-system-command-and-get-output
         char command_opt[1035];
         FILE *fp;
@@ -276,12 +281,15 @@ int main(int argc, char *argv[]){
 
 
 
+        AFTER_EXECUTED:
 
 
         free(final_command);
 	}
 
 	reset_console();
+
+
 
 	printf("\n");
 
