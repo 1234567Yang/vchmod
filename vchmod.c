@@ -213,7 +213,7 @@ int main(int argc, char *argv[]){
         char *prefix = malloc(strlen("cd ") + strlen(cwd) + strlen(" && ") + 1);
         sprintf(prefix, "cd %s && ", cwd);
 
-        char *final_command = malloc(strlen(prefix) + strlen(final_command) + 1);
+        char *final_command = malloc(strlen(prefix) + strlen(execute_command) + 1);
         sprintf(final_command, "%s%s", prefix, execute_command);
         
 
