@@ -1,5 +1,7 @@
 # vchmod
 
+# Intro
+
 v - visual
 <br>
 vchmod - visual chmod
@@ -40,3 +42,9 @@ Press q to cancle. Press anything else to execute
 Hello, World!
 [user-c@**** vchmod]$
 ```
+
+
+# Quick start
+
+* Clone
+* `gcc -o vchmod *.c`
