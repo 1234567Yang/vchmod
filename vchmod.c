@@ -26,7 +26,7 @@ int print_user_access_control(int arr[9], int cursor_pos)
 	char arr_c[9];
 	for(int i = 0; i < 9; i++){
 		if(arr[i] == 0) arr_c[i] = '-';
-		else if(arr[i] == 1) arr_c[i] = 'o';
+		else if(arr[i] == 1) arr_c[i] = 'a';
 		else{
 			perror("An error occured: arr is neither 0 or 1.\n");
 			reset_console();
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]){
     new.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &new);    
 
-	printf("\r\nq - Quit; Enter - Save; o - On\n\n\r");
+	printf("\r\nq - Quit; Enter - Save; Arrows - Move/Switch; a - Allowed\n\n\r");
 	printf("     User      Group     Other     \n\r");
 	printf("     R W X     R W X     R W X     \n\r");
 	
@@ -125,12 +125,15 @@ int main(int argc, char *argv[]){
                 } else if (seq[1] == 'C') {
                     // Right arrow
                     cursor_pos = (cursor_pos + 1 <= 8) ? (cursor_pos + 1) : 8;
-                }
+                }else{
+					// goto FLAG_SWITCH_STATE;
+					arr[cursor_pos] = abs(arr[cursor_pos] - 1);
+				}
             }
         }
 		else
 		{
-			arr[cursor_pos] = abs(arr[cursor_pos] - 1);
+			// FLAG_SWITCH_STATE:
 		}
 
 
