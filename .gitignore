@@ -1,0 +1,8 @@
+# Source - https://stackoverflow.com/a/14209724
+# Posted by Havok
+# Retrieved 2026-01-29, License - CC BY-SA 3.0
+
+*
+!*.c
+!*.h
+!Makefile
